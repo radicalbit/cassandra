@@ -595,6 +595,28 @@ public class FBUtilities
         return String.format("%.3fKiB", size / (double) (1 << 10));
     }
 
+    public static String prettyPrintRateInSeconds(long rate)
+    {
+        if (rate >= 1 << 30)
+            return String.format("%.3fGiB/s", rate / (double) (1 << 30));
+        if (rate >= 1 << 20)
+            return String.format("%.3fMiB/s", rate / (double) (1 << 20));
+        return String.format("%.3fKiB/s", rate / (double) (1 << 10));
+    }
+
+    public static int bytesPerSeconds(long bytes, long timeInNano)
+    {
+        if (timeInNano > 0)
+        {
+            double bytesPerNano = ((double) bytes) / timeInNano;
+            return (int) ((bytesPerNano * 1000 * 1000 * 1000));
+        } else {
+            /* in this case it's better to return an invalid rate instead of throwing an exception
+              since the result will be used in statistics */
+            return -1;
+        }
+    }
+
     /**
      * Starts and waits for the given @param pb to finish.
      * @throws java.io.IOException on non-zero exit code

@@ -88,7 +88,7 @@ public class CompactionTask extends AbstractCompactionTask
         if (partialCompactionsAcceptable() && transaction.originals().size() > 1)
         {
             // Try again w/o the largest one.
-            logger.warn("insufficient space to compact all requested files {}", StringUtils.join(transaction.originals(), ", "));
+            logger.warn("Insufficient space to compact all requested files {}", StringUtils.join(transaction.originals(), ", "));
             // Note that we have removed files that are still marked as compacting.
             // This suboptimal but ok since the caller will unmark all the sstables at the end.
             SSTableReader removedSSTable = cfs.getMaxSizeFile(transaction.originals());
@@ -206,21 +206,35 @@ public class CompactionTask extends AbstractCompactionTask
             }
 
             // log a bunch of statistics about the result and save to system table compaction_history
-            long dTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+            long durationInNano = System.nanoTime() - start;
+            long dTime = TimeUnit.NANOSECONDS.toMillis(durationInNano);
             long startsize = SSTableReader.getTotalBytes(transaction.originals());
             long endsize = SSTableReader.getTotalBytes(newSStables);
             double ratio = (double) endsize / (double) startsize;
+
+            int bytesPerSeconds = FBUtilities.bytesPerSeconds(startsize-endsize, durationInNano);
 
             StringBuilder newSSTableNames = new StringBuilder();
             for (SSTableReader reader : newSStables)
                 newSSTableNames.append(reader.descriptor.baseFilename()).append(",");
 
-            double mbps = dTime > 0 ? (double) endsize / (1024 * 1024) / ((double) dTime / 1000) : 0;
             long totalSourceRows = 0;
             String mergeSummary = updateCompactionHistory(cfs.keyspace.getName(), cfs.getColumnFamilyName(), mergedRowCounts, startsize, endsize);
-            logger.debug(String.format("Compacted (%s) %d sstables to [%s] to level=%d.  %,d bytes to %,d (~%d%% of original) in %,dms = %fMB/s.  %,d total partitions merged to %,d.  Partition merge counts were {%s}",
-                                      taskId, transaction.originals().size(), newSSTableNames.toString(), getLevel(), startsize, endsize, (int) (ratio * 100), dTime, mbps, totalSourceRows, totalKeysWritten, mergeSummary));
-            logger.trace(String.format("CF Total Bytes Compacted: %,d", CompactionTask.addToTotalBytesCompacted(endsize)));
+            logger.debug(String.format("Compacted (%s) %d sstables to [%s] to level=%d.  %s to %s (~%d%% of original) in %,dms = %s.  %,d total partitions merged to %,d.  Partition merge counts were {%s}",
+                                      taskId,
+                                      transaction.originals().size(),
+                                      newSSTableNames.toString(),
+                                      getLevel(),
+                                      FBUtilities.prettyPrintMemory(startsize),
+                                      FBUtilities.prettyPrintMemory(endsize),
+                                      (int) (ratio * 100),
+                                      dTime,
+                                      FBUtilities.prettyPrintRateInSeconds(bytesPerSeconds),
+                                      totalSourceRows,
+                                      totalKeysWritten,
+                                      mergeSummary));
+            logger.trace(String.format("CF Total Bytes Compacted: %s", FBUtilities.prettyPrintMemory(CompactionTask.addToTotalBytesCompacted(endsize))));
             logger.trace("Actual #keys: {}, Estimated #keys:{}, Err%: {}", totalKeysWritten, estimatedKeys, ((double)(totalKeysWritten - estimatedKeys)/totalKeysWritten));
 
             if (transaction.isOffline())
