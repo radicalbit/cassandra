@@ -780,7 +780,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
             }
             while (new File(newDescriptor.filenameFor(Component.DATA)).exists());
 
-            logger.info("Renaming new SSTable {} to {}", descriptor, newDescriptor);
+            System.out.println("Renaming new SSTable from "  + descriptor + " to " + newDescriptor);
             SSTableWriter.rename(descriptor, newDescriptor, entry.getValue());
 
             SSTableReader reader;
