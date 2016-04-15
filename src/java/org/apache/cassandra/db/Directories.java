@@ -327,7 +327,7 @@ public class Directories
         boolean tooBig = false;
         for (DataDirectory dataDir : dataDirectories)
         {
-            System.out.println("*** DATA DIR " + dataDir + " of "+ dataDirectories.length);
+            System.out.println("*** DATA DIR " + dataDir.location.getAbsolutePath() + " of "+ dataDirectories.length);
             if (BlacklistedDirectories.isUnwritable(getLocationForDisk(dataDir)))
             {
                 logger.trace("removing blacklisted candidate {}", dataDir.location);
